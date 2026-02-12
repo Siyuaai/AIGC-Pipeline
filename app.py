@@ -1,18 +1,21 @@
 import streamlit as st
 import os
 import time
-import pandas as pd  # 👈 引入 Pandas 处理表格
+import pandas as pd
+import random
+from datetime import datetime
 from src.data_processor import WorkflowModifier
 from src.comfy_client import ComfyAgent
 from src.file_manager import AssetManager
 
 # === ⚙️ 配置区 ===
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE_PATH = os.path.join(BASE_DIR, "config", "workflow_api.json") # 文生图模板
+TEMPLATE_PATH = os.path.join(BASE_DIR, "config", "workflow_api.json")
 PROJECT_OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+HISTORY_FILE = os.path.join(BASE_DIR, "history.csv")
 COMFY_OUTPUT_DIR = r"D:\ComfyUI_Main\ComfyUI-aki-v3\ComfyUI-aki-v3\ComfyUI\output"
 
-# 节点 ID (保持不变)
+# 节点 ID
 NODE_ID_PROMPT = "6"
 NODE_ID_SEED = "3"
 
@@ -24,150 +27,213 @@ STYLE_PRESETS = {
     "🖌️ 墨水油画": "oil painting, thick strokes, ink wash, artistic, abstract"
 }
 
-st.set_page_config(page_title="Siyua AIGC Factory", layout="wide", page_icon="🏭")
+st.set_page_config(page_title="Siyua BI Dashboard & Factory", layout="wide", page_icon="📊")
 
-st.title("🏭 AIGC 智能生产管线")
+# === 🧠 数据记录核心 ===
+def log_job(prompt, style, seed, status, cost_time, filename="N/A"):
+    new_data = {
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "prompt": prompt,
+        "style": style,
+        "seed": seed,
+        "status": status,
+        "cost_time_sec": round(cost_time, 2),
+        "filename": filename
+    }
+    if not os.path.exists(HISTORY_FILE):
+        df = pd.DataFrame([new_data])
+        df.to_csv(HISTORY_FILE, index=False, encoding='utf-8-sig')
+    else:
+        df = pd.DataFrame([new_data])
+        df.to_csv(HISTORY_FILE, mode='a', header=False, index=False, encoding='utf-8-sig')
 
-# === 🎛️ 分页系统 ===
-tab1, tab2 = st.tabs(["🎮 单人控制台 (Manual)", "🚀 批量流水线 (Batch)"])
+# === 🎨 UI 主标题 ===
+st.title("🏭 Siyua AIGC 智能数据工厂 (v1.5)")
 
-# ------------------------------------------------------------------
-# Tab 1: 经典手动模式 (这是你之前成功的代码，逻辑完全一致)
-# ------------------------------------------------------------------
+# === 🗂️ 三大功能区 ===
+tab1, tab2, tab3 = st.tabs(["🎮 单人控制台", "🚀 批量流水线", "📊 BI 数据看板"])
+
+# --- Tab 1: 单人模式 ---
 with tab1:
     col1, col2 = st.columns([1, 2])
     with col1:
-        st.subheader("单兵作战")
+        st.subheader("指令输入")
         user_prompt = st.text_area("画面描述", value="1girl, looking at viewer", height=100)
         selected_style = st.selectbox("画风选择", list(STYLE_PRESETS.keys()))
-        seed_input = st.number_input("种子", value=1001, min_value=1)
+        # 增加随机选项
+        use_random = st.checkbox("🎲 随机种子", value=True)
+        seed_input = st.number_input("固定种子", value=1001, disabled=use_random)
         
-        if st.button("✨ 立即生成", key="btn_manual"):
+        if st.button("✨ 立即生成", type="primary"):
+            start_time = time.time()
             agent = ComfyAgent()
+            
+            # 决定种子
+            real_seed = random.randint(1, 10**14) if use_random else seed_input
+            
             if agent.is_server_ready():
                 try:
                     modifier = WorkflowModifier(TEMPLATE_PATH)
                     final_prompt = f"{user_prompt}, {STYLE_PRESETS[selected_style]}"
                     modifier.update_prompt(NODE_ID_PROMPT, final_prompt)
-                    
                     if NODE_ID_SEED in modifier.workflow_data:
-                        modifier.workflow_data[NODE_ID_SEED]["inputs"]["seed"] = seed_input
+                        modifier.workflow_data[NODE_ID_SEED]["inputs"]["seed"] = real_seed
                     
                     success, msg = agent.send_job(modifier.get_workflow())
                     
                     if success:
-                        st.success(f"✅ 指令发送成功: {msg}")
-                        # 模拟进度条
+                        st.success(f"指令发送成功，种子: {real_seed}")
                         bar = st.progress(0)
                         for i in range(100):
                             time.sleep(0.05) 
                             bar.progress(i+1)
                         
-                        # 搬运
-                        count = AssetManager(COMFY_OUTPUT_DIR, PROJECT_OUTPUT_DIR).sync_latest_images(time.strftime("%Y%m%d"))
-                        if count > 0:
+                        moved_count = AssetManager(COMFY_OUTPUT_DIR, PROJECT_OUTPUT_DIR).sync_latest_images(time.strftime("%Y%m%d"))
+                        cost_time = time.time() - start_time
+                        
+                        if moved_count > 0:
+                            log_job(user_prompt, selected_style, real_seed, "Success", cost_time, f"Single_{moved_count}")
                             st.balloons()
                             st.rerun()
                         else:
-                            st.warning("⚠️ 未检测到新文件，请稍后刷新画廊")
+                            log_job(user_prompt, selected_style, real_seed, "NoOutput", cost_time)
+                            st.warning("⚠️ 未检测到新文件")
+                    else:
+                        st.error(f"发送失败: {msg}")
                 except Exception as e:
-                    st.error(f"❌ 错误: {e}")
+                    st.error(f"系统错误: {e}")
             else:
-                st.error("❌ 无法连接 ComfyUI")
+                st.error("无法连接 ComfyUI")
 
-# ------------------------------------------------------------------
-# Tab 2: 批量生产模式 (新增功能)
-# ------------------------------------------------------------------
+# --- Tab 2: 批量模式 (升级版) ---
 with tab2:
     st.subheader("📊 CSV 批量作业")
-    st.info("💡 请上传包含表头 [prompt, style, seed] 的 CSV 文件")
     
-    # 1. 上传 CSV
-    uploaded_file = st.file_uploader("📂 上传工单文件", type=["csv"])
+    col_a, col_b = st.columns([2, 1])
+    with col_a:
+        uploaded_file = st.file_uploader("📂 上传工单文件", type=["csv"])
+    with col_b:
+        # ✨ 解决“图片一样”的问题
+        force_random = st.checkbox("🔥 强制随机化种子", value=True, help="勾选后，将忽略CSV里的种子，全部重新随机生成")
     
     if uploaded_file:
-        # 读取并展示表格
         df = pd.read_csv(uploaded_file)
         st.dataframe(df, use_container_width=True)
-        st.caption(f"共检测到 {len(df)} 个任务")
         
-        # 启动按钮
-        if st.button("🚀 启动自动化生产线", type="primary"):
+        if st.button("🚀 启动自动化生产线"):
             agent = ComfyAgent()
             if not agent.is_server_ready():
-                st.error("❌ ComfyUI 未启动！")
+                st.error("ComfyUI 未启动")
             else:
-                # 初始化进度
-                progress_bar = st.progress(0, text="准备开始...")
-                status_box = st.empty() # 占位符，用于动态显示状态
+                progress_bar = st.progress(0)
+                status_box = st.empty()
                 total_jobs = len(df)
-                success_count = 0
                 
-                # === 核心循环：遍历每一行数据 ===
                 for index, row in df.iterrows():
-                    # 1. 解析数据
+                    start_time = time.time()
+                    
                     current_prompt = str(row['prompt'])
-                    # 如果 CSV 里的 style 不在预设里，就用默认的
                     style_key = row.get('style', "✨ 通用高画质")
                     style_prompt = STYLE_PRESETS.get(style_key, "")
-                    current_seed = int(row.get('seed', 1001))
                     
-                    status_box.info(f"🔄 [任务 {index+1}/{total_jobs}] 正在生成: {current_prompt}...")
+                    # 种子逻辑：如果强制随机，就随机；否则用CSV里的
+                    if force_random:
+                        current_seed = random.randint(1, 10**14)
+                    else:
+                        current_seed = int(row.get('seed', 1001))
+                    
+                    status_box.info(f"🔄 [{index+1}/{total_jobs}] 生成中: {current_prompt} (Seed: {current_seed})")
                     
                     try:
-                        # 2. 修改工作流
                         modifier = WorkflowModifier(TEMPLATE_PATH)
                         final_prompt = f"{current_prompt}, {style_prompt}"
-                        
                         modifier.update_prompt(NODE_ID_PROMPT, final_prompt)
                         if NODE_ID_SEED in modifier.workflow_data:
                             modifier.workflow_data[NODE_ID_SEED]["inputs"]["seed"] = current_seed
                         
-                        # 3. 发送指令
                         success, msg = agent.send_job(modifier.get_workflow())
                         
                         if success:
-                            success_count += 1
-                            # ⏳ 关键：给显卡一点喘息时间，避免队列堵死
-                            # 每张图等待 5 秒 (根据你的显卡速度调整)
-                            time.sleep(5) 
+                            time.sleep(4) # 显卡喘息时间
+                            cost_time = time.time() - start_time
+                            log_job(current_prompt, style_key, current_seed, "Success", cost_time)
                         else:
-                            st.error(f"❌ 任务 {index+1} 失败: {msg}")
-                            
+                            log_job(current_prompt, style_key, current_seed, "Failed", 0)
                     except Exception as e:
-                        st.error(f"❌ 数据异常: {e}")
+                        log_job(current_prompt, style_key, current_seed, "Error", 0)
                     
-                    # 更新进度条
-                    progress_bar.progress((index + 1) / total_jobs, text=f"进度: {index+1}/{total_jobs}")
+                    progress_bar.progress((index + 1) / total_jobs)
                 
-                status_box.success(f"✅ 生产结束！成功发送 {success_count} 个任务。正在归档图片...")
-                
-                # 4. 最后统一搬运一次
                 time.sleep(2)
                 moved = AssetManager(COMFY_OUTPUT_DIR, PROJECT_OUTPUT_DIR).sync_latest_images(time.strftime("%Y%m%d"))
-                st.success(f"📦 归档完成！共捕获 {moved} 张新图片。")
-                time.sleep(2)
+                status_box.success(f"✅ 生产结束！归档 {moved} 张图片。")
+                time.sleep(1)
                 st.rerun()
 
-# ------------------------------------------------------------------
-# 公共画廊区
-# ------------------------------------------------------------------
-st.markdown("---")
-st.subheader("🖼️ 资产监控 (Gallery)")
+# --- Tab 3: BI 数据看板 (这是你的主场) ---
+with tab3:
+    st.subheader("📈 生产效能分析")
+    
+    if os.path.exists(HISTORY_FILE):
+        # 读取数据
+        df_hist = pd.read_csv(HISTORY_FILE)
+        
+        # 1. KPI 核心指标卡
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        kpi1.metric("总产出量", f"{len(df_hist)} 张")
+        kpi2.metric("平均耗时", f"{df_hist['cost_time_sec'].mean():.2f} 秒")
+        
+        success_rate = (len(df_hist[df_hist['status']=='Success']) / len(df_hist)) * 100
+        kpi3.metric("生产成功率", f"{success_rate:.1f}%")
+        
+        # 计算今日产量
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        today_count = len(df_hist[df_hist['timestamp'].str.contains(today_str)])
+        kpi4.metric("今日产量", f"{today_count} 张", delta=f"+{today_count}")
+        
+        st.markdown("---")
+        
+        # 2. 图表分析区
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.caption("🎨 风格使用偏好")
+            # 统计各风格数量
+            style_counts = df_hist['style'].value_counts()
+            st.bar_chart(style_counts)
+            
+        with c2:
+            st.caption("⏱️ 生成性能趋势 (最近20单)")
+            # 显示最近20条的耗时趋势
+            st.line_chart(df_hist.tail(20)['cost_time_sec'])
+            
+        # 3. 详细数据表
+        with st.expander("📄 查看完整生产日志"):
+            st.dataframe(df_hist.sort_index(ascending=False), use_container_width=True)
+            
+    else:
+        st.info("暂无历史数据，请先去生产几张图片！")
 
-# 刷新按钮
+# --- 公共画廊 (优化版) ---
+st.markdown("---")
+col_g1, col_g2 = st.columns([4, 1])
+with col_g1:
+    st.subheader("🖼️ 资产监控")
+with col_g2:
+    # 增加画廊显示数量控制
+    limit_num = st.number_input("显示数量", value=8, min_value=4, max_value=100, step=4)
+
 if st.button("🔄 刷新画廊"):
     st.rerun()
 
 if os.path.exists(PROJECT_OUTPUT_DIR):
     images = [f for f in os.listdir(PROJECT_OUTPUT_DIR) if f.endswith(('.png', '.jpg'))]
     if images:
-        # 按时间倒序
         images.sort(key=lambda x: os.path.getmtime(os.path.join(PROJECT_OUTPUT_DIR, x)), reverse=True)
         
-        # 显示最近的 8 张
+        # 使用动态数量
         cols = st.columns(4)
-        for idx, img in enumerate(images[:8]): 
+        for idx, img in enumerate(images[:limit_num]): 
             with cols[idx % 4]:
                 st.image(os.path.join(PROJECT_OUTPUT_DIR, img), caption=img, use_container_width=True)
     else:

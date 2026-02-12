@@ -1,0 +1,24 @@
+﻿timestamp,prompt,style,seed,status,cost_time_sec,filename
+2026-02-12 11:01:23,a red apple,✨ 通用高画质,1006,Success,6.06,Batch_1
+2026-02-12 11:01:53,a cute cat in space suit,🤖 赛博朋克,1001,Success,5.02,N/A
+2026-02-12 11:01:58,luxury perfume bottle on water,✨ 通用高画质,2002,Success,5.01,N/A
+2026-02-12 11:02:03,ancient chinese temple in mountains,🖌️ 墨水油画,3003,Success,5.02,N/A
+2026-02-12 11:02:08,cyberpunk city street at night,🤖 赛博朋克,4004,Success,5.01,N/A
+2026-02-12 11:02:13,1girl with white hair,🌸 日系动漫,5005,Success,5.02,N/A
+2026-02-12 11:07:44,a red apple,✨ 通用高画质,1006,Success,5.67,Batch_1
+2026-02-12 11:08:09,a cute cat in space suit,🤖 赛博朋克,1001,Success,5.01,N/A
+2026-02-12 11:08:14,luxury perfume bottle on water,✨ 通用高画质,2002,Success,5.02,N/A
+2026-02-12 11:08:19,ancient chinese temple in mountains,🖌️ 墨水油画,3003,Success,5.01,N/A
+2026-02-12 11:08:24,cyberpunk city street at night,🤖 赛博朋克,4004,Success,5.01,N/A
+2026-02-12 11:08:29,1girl with white hair,🌸 日系动漫,5005,Success,5.02,N/A
+2026-02-12 11:16:35,a apple,✨ 通用高画质,997,Success,5.63,Batch_1
+2026-02-12 11:17:01,a cute cat in space suit,🤖 赛博朋克,1001,Success,5.01,N/A
+2026-02-12 11:17:06,luxury perfume bottle on water,✨ 通用高画质,2002,Success,5.03,N/A
+2026-02-12 11:17:11,ancient chinese temple in mountains,🖌️ 墨水油画,3003,Success,5.02,N/A
+2026-02-12 11:17:16,cyberpunk city street at night,🤖 赛博朋克,4004,Success,5.02,N/A
+2026-02-12 11:17:21,1girl with white hair,🌸 日系动漫,5005,Success,5.02,N/A
+2026-02-12 11:21:41,a cute cat in space suit,🤖 赛博朋克,71165963999863,Success,4.01,N/A
+2026-02-12 11:21:45,luxury perfume bottle on water,✨ 通用高画质,72591543943991,Success,4.02,N/A
+2026-02-12 11:21:49,ancient chinese temple in mountains,🖌️ 墨水油画,31116350910940,Success,4.01,N/A
+2026-02-12 11:21:54,cyberpunk city street at night,🤖 赛博朋克,5214285262285,Success,4.2,N/A
+2026-02-12 11:21:58,1girl with white hair,🌸 日系动漫,61920131380372,Success,4.02,N/A
