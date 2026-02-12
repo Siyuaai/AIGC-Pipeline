@@ -1,48 +1,51 @@
 import os
 import shutil
 import time
-from pathlib import Path
 
 class AssetManager:
     """
-    负责文件的搬运、清洗和归档。
+    负责管理 AIGC 资产（图片）的搬运、归档和清洗。
     """
     def __init__(self, comfy_output_dir, project_output_dir):
-        self.source_dir = Path(comfy_output_dir)
-        self.target_dir = Path(project_output_dir)
+        self.source_dir = comfy_output_dir
+        self.target_dir = project_output_dir
         
-        # 自动创建输出目录
-        if not self.target_dir.exists():
-            self.target_dir.mkdir(parents=True)
+        # 如果目标目录不存在，自动创建
+        if not os.path.exists(self.target_dir):
+            os.makedirs(self.target_dir)
 
-    def sync_latest_images(self, batch_date_str):
+    def sync_latest_images(self, date_str=None):
         """
-        从 ComfyUI 输出目录搬运最新的图片到项目目录
+        将 ComfyUI 输出目录中的最新图片搬运到项目目录。
         """
-        print(f"🧹 开始归档图片资产...")
-        
-        # 1. 扫描源文件夹
-        if not self.source_dir.exists():
-            print(f"❌ 找不到 ComfyUI 输出目录: {self.source_dir}")
-            return
+        if not os.path.exists(self.source_dir):
+            print(f"⚠️ 警告：源目录不存在 -> {self.source_dir}")
+            return 0 # 返回 0 防止报错
 
+        # 1. 获取源目录所有图片文件
+        all_files = os.listdir(self.source_dir)
+        image_files = [f for f in all_files if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
+
+        if not image_files:
+            return 0
+
+        # 2. 搬运逻辑
         moved_count = 0
-        
-        # 2. 遍历并搬运
-        # 实际生产中，我们会对比文件创建时间，只搬运刚才生成的
-        # 这里为了演示简单，我们搬运所有以 ComfyUI_ 开头的临时文件
-        for file_item in self.source_dir.iterdir():
-            if file_item.is_file() and file_item.name.startswith("ComfyUI_"):
-                # 构建新名字: Bili_Project_YYYYMMDD_001.png
-                new_name = f"Bili_Project_{batch_date_str}_{moved_count+1:03d}{file_item.suffix}"
-                target_path = self.target_dir / new_name
+        for img in image_files:
+            src_path = os.path.join(self.source_dir, img)
+            
+            # 简单策略：只搬运最近 60 秒内生成的文件 (防止把旧图也搬过来)
+            # 或者你可以根据 date_str 前缀来判断
+            file_mtime = os.path.getmtime(src_path)
+            if time.time() - file_mtime < 60: 
+                dst_name = f"Bili_Project_{time.strftime('%Y%m%d')}_{img}"
+                dst_path = os.path.join(self.target_dir, dst_name)
                 
-                try:
-                    # 移动文件 (Move) - 相当于剪切粘贴
-                    shutil.move(str(file_item), str(target_path))
-                    print(f"📦 归档: {file_item.name} -> {new_name}")
-                    moved_count += 1
-                except Exception as e:
-                    print(f"⚠️ 搬运失败: {e}")
+                shutil.move(src_path, dst_path)
+                print(f"📦 归档: {img} -> {dst_name}")
+                moved_count += 1
         
-        print(f"🎉 归档完成！共处理 {moved_count} 个资产。\n查看路径: {self.target_dir}")
+        if moved_count > 0:
+            print(f"🎉 归档完成！共处理 {moved_count} 个资产。")
+        
+        return moved_count # ⚠️ 关键：app.py 依赖这个返回值
