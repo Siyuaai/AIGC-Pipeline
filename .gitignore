@@ -1,2 +1,4 @@
+history.csv
+batch.csv
+auto_generated_jobs*.csv
 output/
-__pycache__/
