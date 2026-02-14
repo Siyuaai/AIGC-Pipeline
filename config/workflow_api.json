@@ -1,107 +1,162 @@
 {
-  "1": {
+  "3": {
+    "inputs": {
+      "seed": 1001,
+      "steps": 20,
+      "cfg": 7,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [ "10", 0 ],
+      "positive": [ "12", 0 ],
+      "negative": [ "12", 1 ],
+      "latent_image": [ "5", 0 ]
+    },
+    "class_type": "KSampler",
+    "_meta": { "title": "K采样器 (第一遍：构图)" }
+  },
+  "4": {
     "inputs": {
       "ckpt_name": "anything-v5-PrtRE.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Checkpoint加载器（简易）"
-    }
-  },
-  "3": {
-    "inputs": {
-      "seed": 577328329027516,
-      "steps": 20,
-      "cfg": 8,
-      "sampler_name": "euler",
-      "scheduler": "simple",
-      "denoise": 1,
-      "model": [
-        "1",
-        0
-      ],
-      "positive": [
-        "6",
-        0
-      ],
-      "negative": [
-        "7",
-        0
-      ],
-      "latent_image": [
-        "8",
-        0
-      ]
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "K采样器"
-    }
-  },
-  "4": {
-    "inputs": {
-      "samples": [
-        "3",
-        0
-      ],
-      "vae": [
-        "1",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE解码"
-    }
+    "_meta": { "title": "Checkpoint加载器" }
   },
   "5": {
-    "inputs": {
-      "filename_prefix": "ComfyUI",
-      "images": [
-        "4",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "保存图像"
-    }
-  },
-  "6": {
-    "inputs": {
-      "text": "A cyberpunk city",
-      "clip": [
-        "1",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP文本编码"
-    }
-  },
-  "7": {
-    "inputs": {
-      "text": "",
-      "clip": [
-        "1",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP文本编码"
-    }
-  },
-  "8": {
     "inputs": {
       "width": 512,
       "height": 512,
       "batch_size": 1
     },
     "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "空Latent图像"
-    }
+    "_meta": { "title": "空白潜空间" }
+  },
+  "6": {
+    "inputs": {
+      "text": "1girl, full body, masterpiece, best quality",
+      "clip": [ "10", 1 ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "正向提示词" }
+  },
+  "7": {
+    "inputs": {
+      "text": "embedding:EasyNegative, bad hands, lowres, bad anatomy",
+      "clip": [ "10", 1 ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "负向提示词" }
+  },
+  "8": {
+    "inputs": {
+      "samples": [ "3", 0 ],
+      "vae": [ "4", 2 ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE解码 (一阶段)" }
+  },
+  "9": {
+    "inputs": {
+      "filename_prefix": "Siyua_Hires",
+      "images": [ "19", 0 ]
+    },
+    "class_type": "SaveImage",
+    "_meta": { "title": "保存图像 (最终高清版)" }
+  },
+  "10": {
+    "inputs": {
+      "lora_name": "blindbox_v1_mix.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [ "4", 0 ],
+      "clip": [ "4", 1 ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": { "title": "LoRA加载器" }
+  },
+  "11": {
+    "inputs": {
+      "control_net_name": "control_v11p_sd15_canny_fp16.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": { "title": "CN模型加载" }
+  },
+  "12": {
+    "inputs": {
+      "strength": 1,
+      "start_percent": 0,
+      "end_percent": 1,
+      "positive": [ "6", 0 ],
+      "negative": [ "7", 0 ],
+      "control_net": [ "11", 0 ],
+      "image": [ "14", 0 ] 
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": { "title": "应用CN (高级)" }
+  },
+  "13": {
+    "inputs": {
+      "image": "example.png",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": { "title": "加载参考图" }
+  },
+  "14": {
+    "inputs": {
+      "low_threshold": 100,
+      "high_threshold": 200,
+      "image": [ "13", 0 ]
+    },
+    "class_type": "CannyEdgePreprocessor",
+    "_meta": { "title": "Canny预处理器" }
+  },
+  "15": {
+    "inputs": {
+      "model_name": "4x-UltraSharp.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": { "title": "加载放大模型" }
+  },
+  "16": {
+    "inputs": {
+      "upscale_by": 2,
+      "image": [ "8", 0 ],
+      "upscale_model": [ "15", 0 ] 
+    },
+    "class_type": "ImageUpscaleWithModel",
+    "_meta": { "title": "图像放大 (物理)" }
+  },
+  "17": {
+    "inputs": {
+      "pixels": [ "16", 0 ],
+      "vae": [ "4", 2 ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": { "title": "VAE编码 (重回潜空间)" }
+  },
+  "18": {
+    "inputs": {
+      "seed": 1001,
+      "steps": 15,
+      "cfg": 7,
+      "sampler_name": "euler",
+      "scheduler": "normal",
+      "denoise": 0.5,
+      "model": [ "10", 0 ],
+      "positive": [ "6", 0 ],
+      "negative": [ "7", 0 ],
+      "latent_image": [ "17", 0 ]
+    },
+    "class_type": "KSampler",
+    "_meta": { "title": "K采样器 (第二遍：精绘)" }
+  },
+  "19": {
+    "inputs": {
+      "samples": [ "18", 0 ],
+      "vae": [ "4", 2 ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE解码 (最终)" }
   }
 }
